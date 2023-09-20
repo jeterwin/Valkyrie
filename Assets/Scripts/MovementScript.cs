@@ -11,12 +11,11 @@ public class MovementScript : MonoBehaviour
 
     [Header("Movement Variables")]
     [SerializeField] float MovementSpeed;
-    [Range(0f,5f)]
-    [SerializeField] float MaxYSpeed;
 
     [Header("Jumping Variables")]
-    [Range(1f,10f)]
     [SerializeField] float JumpSpeed = 1f;
+    [Range(0f,10f)]
+    [SerializeField] float MaxYSpeed;
     [SerializeField] float FallMultiplier = 2.5f;
     [SerializeField] float LowJumpMultiplier = 2f;
 
@@ -28,13 +27,14 @@ public class MovementScript : MonoBehaviour
     [SerializeField] Color Color;
     [SerializeField] private bool IsDashing = false;
     [SerializeField] private bool CanDash = true;
-    Coroutine DashingCoroutine;
+    private Coroutine DashingCoroutine;
 
-    [Header("Wall Slide Variables")]
-    private bool IsWallSliding = false;
+    [Header("Wallslide Variables")]
     [SerializeField] private float WallSlidingSpeed;
     [SerializeField] private LayerMask WallLayer;
     [SerializeField] private Transform WallCheck;
+    [SerializeField] private ParticleSystem SlidingParticleSystem;
+    private bool IsWallSliding = false;
 
     [Header("Ground Check")]
     [SerializeField] Transform SpherePosition;
@@ -44,7 +44,7 @@ public class MovementScript : MonoBehaviour
 
     MovementState State = MovementState.Idle;
     private bool IsHoldingJump = false;
-
+    private bool HasJumped = false;
 
     Vector2 MovementAxis;
     private void Awake()
@@ -64,12 +64,21 @@ public class MovementScript : MonoBehaviour
     }
     private void Update()
     {
+        if(!SlidingParticleSystem.isEmitting && IsWallSliding)
+            SlidingParticleSystem.Play();
+        else if(!IsWallSliding)
+            SlidingParticleSystem.Stop();
+
+        if(IsGrounded)
+        {
+            HasJumped = false;
+        }
         IsHoldingJump = Input.GetKey(KeyCode.Space);
-        if(IsGrounded && DashingCoroutine != null)
+/*        if(IsGrounded && DashingCoroutine != null)
         {
             StopCoroutine(DashingCoroutine);
             CanDash = true;
-        }
+        }*/
         if(Input.GetKeyDown(KeyCode.Space) && IsGrounded)
         {
             Jump();
@@ -115,20 +124,20 @@ public class MovementScript : MonoBehaviour
     }
     private void Jump()
     {
+        HasJumped = true;
         rb.velocity = JumpSpeed * Vector2.up;
     }
 
     private void WallSlide()
     {
-        if(!IsGrounded && IsWalled && MovementAxis.x != 0)
-        {
-            IsWallSliding = true;
-            rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -WallSlidingSpeed, float.MaxValue));
-        }
-        else
+        if(IsGrounded || !IsWalled || MovementAxis.x == 0)
         {
             IsWallSliding = false;
+            return;
         }
+
+        IsWallSliding = true;
+        rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -WallSlidingSpeed, float.MaxValue));
     }
 
     private void FallingLogic()
