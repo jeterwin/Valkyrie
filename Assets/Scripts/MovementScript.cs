@@ -4,10 +4,12 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 public class MovementScript : MonoBehaviour
 {
-    private InputActions input;
+    [SerializeField] private InputHandler inputHandler;
+    [SerializeField] private AttackScript attackScript;
     [SerializeField] SpriteRenderer SpriteRenderer;
     [SerializeField] Rigidbody2D rb;
-    [SerializeField] Animator Animator;
+    [SerializeField] private Animator Animator;
+    [SerializeField] CapsuleCollider2D CapsuleCollider;
 
     [Header("Movement Variables")]
     [SerializeField] float MovementSpeed;
@@ -15,9 +17,9 @@ public class MovementScript : MonoBehaviour
     [Header("Jumping Variables")]
     [SerializeField] float JumpSpeed = 1f;
     [Range(0f,10f)]
-    [SerializeField] float MaxYSpeed;
-    [SerializeField] float FallMultiplier = 2.5f;
-    [SerializeField] float LowJumpMultiplier = 2f;
+    [SerializeField] private float MaxYSpeed;
+    [SerializeField] private float FallMultiplier = 2.5f;
+    [SerializeField] private float LowJumpMultiplier = 2f;
 
     [Header("Dashing Variables")]
     [Range(1f,25f)]
@@ -27,67 +29,47 @@ public class MovementScript : MonoBehaviour
     [SerializeField] Color Color;
     [SerializeField] private bool IsDashing = false;
     [SerializeField] private bool CanDash = true;
-    private Coroutine DashingCoroutine;
+    private Coroutine dashingCoroutine;
 
     [Header("Wallslide Variables")]
     [SerializeField] private float WallSlidingSpeed;
     [SerializeField] private LayerMask WallLayer;
     [SerializeField] private Transform WallCheck;
     [SerializeField] private ParticleSystem SlidingParticleSystem;
-    private bool IsWallSliding = false;
+    private bool isWallSliding = false;
 
     [Header("Ground Check")]
     [SerializeField] Transform SpherePosition;
     [SerializeField] float SphereRadius;
     [SerializeField] LayerMask GroundMask;
-    Vector2 DashDirection;
+    private Vector2 dashDirection;
 
-    MovementState State = MovementState.Idle;
-    private bool IsHoldingJump = false;
-    private bool HasJumped = false;
+    public MovementState State { get; set; } = MovementState.Idle;
 
-    Vector2 MovementAxis;
-    private void Awake()
-    {
-        input = new InputActions();
-        input.ActionMap.Movement.started += OnMove;
-        input.ActionMap.Movement.canceled += OnMove;
-        input.ActionMap.Movement.performed += OnMove;
-    }
-    private void OnEnable()
-    {
-        input.ActionMap.Enable();
-    }
-    private void OnDisable()
-    {
-        input.ActionMap.Disable();
-    }
     private void Update()
     {
-        if(!SlidingParticleSystem.isEmitting && IsWallSliding)
-            SlidingParticleSystem.Play();
-        else if(!IsWallSliding)
-            SlidingParticleSystem.Stop();
+        ControlParticles();
+        Jump();
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            if (!CanDash) { return; }
+            dashingCoroutine = StartCoroutine(Dash());
+        }
+    }
 
-        if(IsGrounded)
-        {
-            HasJumped = false;
-        }
-        IsHoldingJump = Input.GetKey(KeyCode.Space);
-/*        if(IsGrounded && DashingCoroutine != null)
-        {
-            StopCoroutine(DashingCoroutine);
-            CanDash = true;
-        }*/
-        if(Input.GetKeyDown(KeyCode.Space) && IsGrounded)
-        {
-            Jump();
-        }
-        if(Input.GetKeyDown(KeyCode.F))
-        {
-            if(!CanDash) { return; }
-            DashingCoroutine = StartCoroutine(Dash());
-        }
+    private void ControlParticles()
+    {
+        if (!SlidingParticleSystem.isEmitting && isWallSliding)
+            SlidingParticleSystem.Play();
+        else if (!isWallSliding)
+            SlidingParticleSystem.Stop();
+    }
+
+    private void Jump()
+    {
+        if(!inputHandler.PressedJump || !IsGrounded) { return; }
+        
+        rb.velocity = JumpSpeed * Vector2.up;
     }
 
     private void FixedUpdate()
@@ -97,17 +79,18 @@ public class MovementScript : MonoBehaviour
         WallSlide();
         if(IsDashing)
         {
-            rb.velocity = DashDistance * DashDirection;
+            rb.velocity = DashDistance * dashDirection;
             return;
         }
-        rb.velocity = new Vector2(MovementAxis.x * MovementSpeed, rb.velocity.y);
+        rb.velocity = new Vector2(inputHandler.MovementAxis.x * MovementSpeed, rb.velocity.y);
         FallingLogic();
     }
     IEnumerator Dash()
     {
         IsDashing = true;
         CanDash = false;
-        DashDirection = MovementAxis.normalized;
+        dashDirection = inputHandler.MovementAxis.normalized == Vector2.zero 
+            ? new Vector2(transform.localScale.x, 0f) : inputHandler.MovementAxis.normalized;
         yield return new WaitForSeconds(DashDuration);
         IsDashing = false;
         yield return new WaitForSeconds(DashCooldown);
@@ -122,21 +105,18 @@ public class MovementScript : MonoBehaviour
     {
         get { return Physics2D.OverlapCircle(WallCheck.position, SphereRadius, WallLayer);}
     }
-    private void Jump()
-    {
-        HasJumped = true;
-        rb.velocity = JumpSpeed * Vector2.up;
-    }
 
     private void WallSlide()
     {
-        if(IsGrounded || !IsWalled || MovementAxis.x == 0)
+        if(IsGrounded || !IsWalled || inputHandler.MovementAxis.x == 0)
         {
-            IsWallSliding = false;
+            isWallSliding = false;
+            CapsuleCollider.size = new Vector2(1.311524f, CapsuleCollider.size.y);
             return;
         }
 
-        IsWallSliding = true;
+        isWallSliding = true;
+        CapsuleCollider.size = new Vector2(0.93f, CapsuleCollider.size.y);
         rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -WallSlidingSpeed, float.MaxValue));
     }
 
@@ -146,7 +126,7 @@ public class MovementScript : MonoBehaviour
         {
             rb.AddForce(Physics2D.gravity.y * FallMultiplier * Time.fixedDeltaTime * Vector2.up, ForceMode2D.Impulse);
         }
-        else if (rb.velocity.y > 0 && !IsHoldingJump)
+        else if (rb.velocity.y > 0 && !inputHandler.PressedJump)
         {
             rb.AddForce(Physics2D.gravity.y * LowJumpMultiplier * Time.fixedDeltaTime * Vector2.up, ForceMode2D.Impulse);
         }
@@ -184,18 +164,16 @@ public class MovementScript : MonoBehaviour
             State = MovementState.Falling;
         }
 
-        if(IsWallSliding)
+        if(isWallSliding)
             State = MovementState.WallSliding;
 
         if(IsDashing)
             State = MovementState.Dashing;
 
-        Animator.SetInteger("State", (int)State);
-    }
+        if(attackScript.isAttacking)
+            State = MovementState.Attacking;
 
-    private void OnMove(InputAction.CallbackContext context)
-    {
-        MovementAxis = context.ReadValue<Vector2>();
+        Animator.SetInteger("State", (int)State);
     }
 
     private void OnDrawGizmos()
@@ -205,7 +183,7 @@ public class MovementScript : MonoBehaviour
         Gizmos.DrawWireSphere(WallCheck.position, SphereRadius);
     }
 
-    enum MovementState
+    public enum MovementState
     {
         Idle,
         Walking,
