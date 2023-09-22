@@ -4916,6 +4916,8 @@ GameObject:
   - component: {fileID: 6500178460816821349}
   - component: {fileID: 7617700263949369404}
   - component: {fileID: 6501591099769159435}
+  - component: {fileID: 6891266222926967761}
+  - component: {fileID: 1760716038247985192}
   - component: {fileID: 7244213833955553940}
   - component: {fileID: 6500178460816821348}
   - component: {fileID: 6500178460816821351}
@@ -4959,7 +4961,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d3613de53907bd44c9a5afd7be9a25e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  InputHandler: {fileID: 7244213833955553940}
+  inputHandler: {fileID: 0}
+  attackScript: {fileID: 0}
   SpriteRenderer: {fileID: 6500178460816821351}
   rb: {fileID: 1097033207}
   Animator: {fileID: 6500178460816821348}
@@ -5004,6 +5007,33 @@ MonoBehaviour:
   attackCooldown: 1.25
   attackRange: 1
   attackSphere: {fileID: 1783220340}
+--- !u!114 &6891266222926967761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6500178460816821350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2830839c34abcf428af7fb60beb7dca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LastSaveObject: {fileID: 0}
+  animator: {fileID: 0}
+  rb: {fileID: 0}
+--- !u!114 &1760716038247985192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6500178460816821350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81e3239f9ab41c542a2cb8c7f4cb000f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &7244213833955553940
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -29,13 +29,13 @@ public class AttackScript : MonoBehaviour
         isAttacking = false;
         var enemies = Physics2D.OverlapCircleAll(attackSphere.position, attackRange);
 
-        foreach(var enemy in enemies)
+/*        foreach(var enemy in enemies)
         {
             if(enemy.TryGetComponent(out Enemy enemyCharacter)) { yield return null; }
             if(enemyCharacter != null)
                 Debug.Log("Enemy found");
             //enemyCharacter.TakeDamage(damage);
-        }
+        }*/
         yield return new WaitForSeconds(attackCooldown);
         canAttack = true;
     }
