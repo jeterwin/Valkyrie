@@ -6,59 +6,65 @@ public class MovementScript : MonoBehaviour
 {
     [SerializeField] private InputHandler inputHandler;
 
-    [SerializeField] private AttackScript attackScript;
-
-    [SerializeField] private SpriteRenderer SpriteRenderer;
+    [SerializeField] private SpriteRenderer spriteRenderer;
 
     [SerializeField] private Rigidbody2D rb;
 
-    [SerializeField] private Animator Animator;
+    [SerializeField] private Animator animator;
 
-    [SerializeField] private CapsuleCollider2D CapsuleCollider;
+    [SerializeField] private DeathScript deathScript;
+
+    public Animator Animator
+    {
+        get { return animator; }
+        set { animator = value; }
+    }
+
+    [SerializeField] private CapsuleCollider2D capsuleCollider;
 
 
     [Header("Movement Variables")]
-    [SerializeField] private float MovementSpeed;
+    [SerializeField] private float movementSpeed;
 
     [Header("Jumping Variables")]
-    [SerializeField] private float JumpSpeed = 1f;
+    [SerializeField] private float jumpSpeed = 1f;
 
     [Range(0f,50f)]
-    [SerializeField] private float MaxYSpeed;
+    [SerializeField] private float maxYSpeed;
 
     [Range(0f,50f)]
-    [SerializeField] private float MinYSpeed;
+    [SerializeField] private float minYSpeed;
 
-    [SerializeField] private float FallMultiplier = 2.5f;
+    [SerializeField] private float fallMultiplier = 2.5f;
 
-    [SerializeField] private float LowJumpMultiplier = 2f;
+    [SerializeField] private float lowJumpMultiplier = 2f;
 
 
     [Header("Dashing Variables")]
     [Range(1f,25f)]
-    [SerializeField] private float DashDistance;
+    [SerializeField] private float dashDistance;
 
-    [SerializeField] private float DashDuration;
+    [SerializeField] private float dashDuration;
 
-    [SerializeField] private float DashCooldown;
+    [SerializeField] private float dashCooldown;
 
-    [SerializeField] private Color Color;
+    [SerializeField] private Color color;
 
-    private bool IsDashing = false;
+    private bool isDashing = false;
 
-    private bool CanDash = true;
+    private bool canDash = true;
 
     private Coroutine dashingCoroutine;
 
 
     [Header("Wallslide Variables")]
-    [SerializeField] private float WallSlidingSpeed;
+    [SerializeField] private float wallSlidingSpeed;
 
-    [SerializeField] private LayerMask WallLayer;
+    [SerializeField] private LayerMask wallLayer;
 
-    [SerializeField] private Transform WallCheck;
+    [SerializeField] private Transform wallCheck;
 
-    [SerializeField] private ParticleSystem SlidingParticleSystem;
+    [SerializeField] private ParticleSystem slidingParticleSystem;
 
     private bool isWallSliding = false;
 
@@ -77,9 +83,9 @@ public class MovementScript : MonoBehaviour
         set { jumpPadStrength = value; }
     }
     [Header("Ground Check")]
-    [SerializeField] private Transform SpherePosition;
-    [SerializeField] float SphereRadius;
-    [SerializeField] private LayerMask GroundMask;
+    [SerializeField] private Transform spherePosition;
+    [SerializeField] private float sphereRadius;
+    [SerializeField] private LayerMask groundMask;
     private Vector2 dashDirection;
 
     public Rigidbody2D Rigidbody
@@ -89,13 +95,27 @@ public class MovementScript : MonoBehaviour
     }
     public MovementState State { get; set; } = MovementState.Idle;
 
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (!collision.CompareTag("Enemy")) { return; }
+
+        HandleDeath();
+    }
+
+    private void HandleDeath()
+    {
+        rb.bodyType = RigidbodyType2D.Static;
+        animator.SetTrigger("OnDeath");
+        deathScript.Animator.Play("DeathAnimation");
+    }
+
     private void Update()
     {
         ControlParticles();
         
         if (Input.GetKeyDown(KeyCode.F))
         {
-            if (!CanDash) { return; }
+            if (!canDash) { return; }
             dashingCoroutine = StartCoroutine(Dash());
         }
     }
@@ -105,54 +125,54 @@ public class MovementScript : MonoBehaviour
         UpdateAnimationState();
         ForceMaxSpeed();
         WallSlide();
-        if(IsDashing)
+        if(isDashing)
         {
-            rb.velocity = DashDistance * dashDirection;
+            rb.velocity = dashDistance * dashDirection;
             if(IsOnPad)
             {
                 rb.AddForce(jumpPadStrength * Vector2.up, ForceMode2D.Impulse);
             }
             return;
         }
-        rb.velocity = new Vector2(inputHandler.MovementAxis.x * MovementSpeed, rb.velocity.y);
+        rb.velocity = new Vector2(inputHandler.MovementAxis.x * movementSpeed, rb.velocity.y);
         FallingLogic();
         if(IsOnPad) return;
         Jump();
     }
     private void ControlParticles()
     {
-        if (!SlidingParticleSystem.isEmitting && isWallSliding)
-            SlidingParticleSystem.Play();
+        if (!slidingParticleSystem.isEmitting && isWallSliding)
+            slidingParticleSystem.Play();
         else if (!isWallSliding)
-            SlidingParticleSystem.Stop();
+            slidingParticleSystem.Stop();
     }
 
     private void Jump()
     {
         if(!inputHandler.PressedJump || !IsGrounded) { return; }
 
-        rb.velocity = JumpSpeed * Vector2.up;
+        rb.velocity = jumpSpeed * Vector2.up;
     }
 
     IEnumerator Dash()
     {
-        IsDashing = true;
-        CanDash = false;
+        isDashing = true;
+        canDash = false;
         dashDirection = inputHandler.MovementAxis.normalized == Vector2.zero 
             ? new Vector2(transform.localScale.x, 0f) : inputHandler.MovementAxis.normalized;
-        yield return new WaitForSeconds(DashDuration);
-        IsDashing = false;
-        yield return new WaitForSeconds(DashCooldown);
-        CanDash = true;
+        yield return new WaitForSeconds(dashDuration);
+        isDashing = false;
+        yield return new WaitForSeconds(dashCooldown);
+        canDash = true;
         yield return null;
     }
     public bool IsGrounded
     {
-        get { return Physics2D.OverlapCircle(SpherePosition.position, SphereRadius, GroundMask); }
+        get { return Physics2D.OverlapCircle(spherePosition.position, sphereRadius, groundMask); }
     }
     bool IsWalled
     {
-        get { return Physics2D.OverlapCircle(WallCheck.position, SphereRadius, WallLayer);}
+        get { return Physics2D.OverlapCircle(wallCheck.position, sphereRadius, wallLayer);}
     }
 
     private void WallSlide()
@@ -160,33 +180,33 @@ public class MovementScript : MonoBehaviour
         if(IsGrounded || !IsWalled || inputHandler.MovementAxis.x == 0)
         {
             isWallSliding = false;
-            CapsuleCollider.size = new Vector2(1.311524f, CapsuleCollider.size.y);
+            capsuleCollider.size = new Vector2(1.311524f, capsuleCollider.size.y);
             return;
         }
 
         isWallSliding = true;
-        CapsuleCollider.size = new Vector2(0.93f, CapsuleCollider.size.y);
-        rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -WallSlidingSpeed, float.MaxValue));
+        capsuleCollider.size = new Vector2(0.93f, capsuleCollider.size.y);
+        rb.velocity = new Vector2(rb.velocity.x, Mathf.Clamp(rb.velocity.y, -wallSlidingSpeed, float.MaxValue));
     }
 
     private void FallingLogic()
     {
         if (rb.velocity.y < 0)
         {
-            rb.AddForce(Physics2D.gravity.y * FallMultiplier * Time.fixedDeltaTime * Vector2.up, ForceMode2D.Impulse);
+            rb.AddForce(Physics2D.gravity.y * fallMultiplier * Time.fixedDeltaTime * Vector2.up, ForceMode2D.Impulse);
         }
         else if (rb.velocity.y > 0 && !inputHandler.PressedJump && !IsOnPad)
         {
-            rb.AddForce(Physics2D.gravity.y * LowJumpMultiplier * Time.fixedDeltaTime * Vector2.up, ForceMode2D.Impulse);
+            rb.AddForce(Physics2D.gravity.y * lowJumpMultiplier * Time.fixedDeltaTime * Vector2.up, ForceMode2D.Impulse);
         }
     }
 
     private void ForceMaxSpeed()
     {
-        if (rb.velocity.y > MaxYSpeed)
-            rb.velocity = new Vector2(rb.velocity.x, MaxYSpeed);
-        else if(rb.velocity.y < -MinYSpeed)
-            rb.velocity = new Vector2(rb.velocity.x, -MinYSpeed);
+        if (rb.velocity.y > maxYSpeed)
+            rb.velocity = new Vector2(rb.velocity.x, maxYSpeed);
+        else if(rb.velocity.y < -minYSpeed)
+            rb.velocity = new Vector2(rb.velocity.x, -minYSpeed);
     }
 
     private void UpdateAnimationState()
@@ -216,23 +236,20 @@ public class MovementScript : MonoBehaviour
         if(isWallSliding)
             State = MovementState.WallSliding;
 
-        if(IsDashing)
+        if(isDashing)
             State = MovementState.Dashing;
-
-        if(attackScript.isAttacking)
-            State = MovementState.Attacking;
 
         if(State != MovementState.Jumping && State != MovementState.Falling && State != MovementState.Dashing)
             IsOnPad = false;
 
-        Animator.SetInteger("State", (int)State);
+        animator.SetInteger("State", (int)State);
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(SpherePosition.position, SphereRadius);
-        Gizmos.DrawWireSphere(WallCheck.position, SphereRadius);
+        Gizmos.DrawWireSphere(spherePosition.position, sphereRadius);
+        Gizmos.DrawWireSphere(wallCheck.position, sphereRadius);
     }
 
     public enum MovementState

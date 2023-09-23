@@ -12,7 +12,7 @@ public class AttackScript : MonoBehaviour
     [SerializeField] private float attackRange = 1f;
     [SerializeField] private Transform attackSphere;
     private bool canAttack = true;
-    public bool isAttacking { get; private set; } = false;
+    public bool IsAttacking { get; private set; } = false;
 
     private void Update()
     {
@@ -23,10 +23,10 @@ public class AttackScript : MonoBehaviour
     }
     IEnumerator Attack()
     {
-        isAttacking = true;
+        IsAttacking = true;
         canAttack = false;
         yield return new WaitForSeconds(0.7f);
-        isAttacking = false;
+        IsAttacking = false;
         var enemies = Physics2D.OverlapCircleAll(attackSphere.position, attackRange);
 
 /*        foreach(var enemy in enemies)
