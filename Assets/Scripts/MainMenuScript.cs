@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Events;
 public class MainMenuScript : MonoBehaviour
 {
+    public Animator MainCanvasAnimator;
     public UnityEvent @Event;
     public UnityEvent ClickedBackFromPlay;
     public UnityEvent ClickedBackFromOptions;
@@ -17,6 +18,14 @@ public class MainMenuScript : MonoBehaviour
             invokedAnyKey = true;
             Event.Invoke();
         }
+    }
+    public void DisableMainCanvasAnimator()
+    {
+        MainCanvasAnimator.enabled = false;
+    }
+    public void EnableMainCanvasAnimator()
+    {
+        MainCanvasAnimator.enabled = true;
     }
     public void ClickPlay()
     {
